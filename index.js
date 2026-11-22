@@ -37,7 +37,7 @@ bot.command("stats", async (ctx) => {
   }
 
   try {
-    const members = await ctx.telegram.getChatMemberCount(channel);
+    const members = await ctx.telegram.getChatMembersCount(channel);
 
     await ctx.reply(
       "📊 ANONYMOUS UPDATES ANALYTICS\n\n" +
@@ -45,7 +45,7 @@ bot.command("stats", async (ctx) => {
       "🟢 New joins since startup: " + joins + "\n" +
       "🔴 Departures since startup: " + leaves + "\n" +
       "❤️ Reaction updates: " + reactionUpdates + "\n\n" +
-      "Note: Exact online subscribers and post views are not available through the Bot API."
+      "📌 Exact online subscribers and post views aren't available through the Bot API."
     );
   } catch (error) {
     console.error("STATS ERROR:", error);
