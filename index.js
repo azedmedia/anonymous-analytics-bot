@@ -31,7 +31,7 @@ bot.start(async (ctx) => {
 });
 
 bot.command("stats", async (ctx) => {
-  if (!ownerId || ctx.chat.id !== ownerId) {
+  if (ownerId && ctx.chat.id !== ownerId) {
     return ctx.reply("Access denied.");
   }
 
@@ -43,39 +43,55 @@ bot.command("stats", async (ctx) => {
       "👥 Total subscribers: " + members + "\n" +
       "🟢 New joins since startup: " + joins + "\n" +
       "🔴 Departures since startup: " + leaves + "\n" +
-      "❤️ Reaction updates received: " + reactionUpdates + "\n\n" +
-      "📌 Post views and exact online users are not available through the Bot API.\n\n" +
-      "Use /stats again for an updated report."
+      "❤️ Reaction updates: " + reactionUpdates + "\n\n" +
+      "📌 Exact online subscribers and post views aren't available through this bot API."
     );
   } catch (error) {
-  console.error("STATS ERROR:", error);
-  await ctx.reply("Error: " + error.message);
+    console.error("STATS ERROR:", error);
+
+    await ctx.reply(
+      "❌ STATISTICS ERROR\n\n" +
+      "Message: " + error.message
+    );
   }
 });
 
 bot.on("chat_member", async (ctx) => {
   const update = ctx.chatMember;
 
-  if (update.chat.username !== channel.replace("@", "")) return;
+  if (
+    !update.chat.username ||
+    update.chat.username.toLowerCase() !== channel.replace("@", "").toLowerCase()
+  ) return;
 
   const oldStatus = update.old_chat_member.status;
   const newStatus = update.new_chat_member.status;
 
-  const wasMember = ["member", "administrator", "creator", "restricted"].includes(oldStatus);
-  const isMember = ["member", "administrator", "creator", "restricted"].includes(newStatus);
+  const memberStatuses = [
+    "member",
+    "administrator",
+    "creator",
+    "restricted"
+  ];
+
+  const wasMember = memberStatuses.includes(oldStatus);
+  const isMember = memberStatuses.includes(newStatus);
 
   if (!wasMember && isMember) joins++;
   if (wasMember && !isMember) leaves++;
 });
 
 bot.on("message_reaction_count", async (ctx) => {
-  if (ctx.chat.username !== channel.replace("@", "")) return;
-
-  reactionUpdates++;
+  if (
+    ctx.chat.username &&
+    ctx.chat.username.toLowerCase() === channel.replace("@", "").toLowerCase()
+  ) {
+    reactionUpdates++;
+  }
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log("Web server started");
+  console.log("Anonymous Analytics server started");
 });
 
 bot.launch({
@@ -88,4 +104,4 @@ bot.launch({
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
-  
+    
