@@ -48,8 +48,8 @@ bot.command("stats", async (ctx) => {
       "Use /stats again for an updated report."
     );
   } catch (error) {
-    console.error(error);
-    ctx.reply("Could not retrieve statistics. Check bot admin access.");
+  console.error("STATS ERROR:", error);
+  await ctx.reply("Error: " + error.message);
   }
 });
 
