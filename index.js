@@ -4,15 +4,15 @@ const express = require("express");
 
 const token = process.env.BOT_TOKEN;
 const channel = process.env.CHANNEL_USERNAME;
+const ownerId = String(process.env.OWNER_ID || "");
 
-if (!token || !channel) {
-  throw new Error("Missing BOT_TOKEN or CHANNEL_USERNAME");
+if (!token || !channel || !ownerId) {
+  throw new Error("Missing BOT_TOKEN, CHANNEL_USERNAME or OWNER_ID");
 }
 
 const bot = new Telegraf(token);
 const app = express();
 
-let ownerId = null;
 let joins = 0;
 let leaves = 0;
 let reactionUpdates = 0;
@@ -22,16 +22,17 @@ app.get("/", (req, res) => {
 });
 
 bot.start(async (ctx) => {
-  ownerId = ctx.chat.id;
+  if (String(ctx.from.id) !== ownerId) {
+    return ctx.reply("Access denied.");
+  }
 
   await ctx.reply(
-    "📊 Welcome to Anonymous Analytics!\n\n" +
-    "Use /stats to view your channel statistics."
+    "Welcome to Anonymous Updates Analytics! 📊\n\nSend /stats to view your channel statistics."
   );
 });
 
 bot.command("stats", async (ctx) => {
-  if (ownerId && ctx.chat.id !== ownerId) {
+  if (String(ctx.from.id) !== ownerId) {
     return ctx.reply("Access denied.");
   }
 
@@ -44,19 +45,15 @@ bot.command("stats", async (ctx) => {
       "🟢 New joins since startup: " + joins + "\n" +
       "🔴 Departures since startup: " + leaves + "\n" +
       "❤️ Reaction updates: " + reactionUpdates + "\n\n" +
-      "📌 Exact online subscribers and post views aren't available through this bot API."
+      "Note: Exact online subscribers and post views are not available through the Bot API."
     );
   } catch (error) {
     console.error("STATS ERROR:", error);
-
-    await ctx.reply(
-      "❌ STATISTICS ERROR\n\n" +
-      "Message: " + error.message
-    );
+    await ctx.reply("Statistics error: " + error.message);
   }
 });
 
-bot.on("chat_member", async (ctx) => {
+bot.on("chat_member", (ctx) => {
   const update = ctx.chatMember;
 
   if (
@@ -64,24 +61,16 @@ bot.on("chat_member", async (ctx) => {
     update.chat.username.toLowerCase() !== channel.replace("@", "").toLowerCase()
   ) return;
 
-  const oldStatus = update.old_chat_member.status;
-  const newStatus = update.new_chat_member.status;
+  const statuses = ["member", "administrator", "creator", "restricted"];
 
-  const memberStatuses = [
-    "member",
-    "administrator",
-    "creator",
-    "restricted"
-  ];
-
-  const wasMember = memberStatuses.includes(oldStatus);
-  const isMember = memberStatuses.includes(newStatus);
+  const wasMember = statuses.includes(update.old_chat_member.status);
+  const isMember = statuses.includes(update.new_chat_member.status);
 
   if (!wasMember && isMember) joins++;
   if (wasMember && !isMember) leaves++;
 });
 
-bot.on("message_reaction_count", async (ctx) => {
+bot.on("message_reaction_count", (ctx) => {
   if (
     ctx.chat.username &&
     ctx.chat.username.toLowerCase() === channel.replace("@", "").toLowerCase()
@@ -91,17 +80,12 @@ bot.on("message_reaction_count", async (ctx) => {
 });
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log("Anonymous Analytics server started");
+  console.log("Analytics server started");
 });
 
 bot.launch({
-  allowedUpdates: [
-    "message",
-    "chat_member",
-    "message_reaction_count"
-  ]
+  allowedUpdates: ["message", "chat_member", "message_reaction_count"]
 });
 
 process.once("SIGINT", () => bot.stop("SIGINT"));
 process.once("SIGTERM", () => bot.stop("SIGTERM"));
-    
